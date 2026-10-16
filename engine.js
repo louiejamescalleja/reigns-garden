@@ -14,7 +14,7 @@
   function select(state,recent=[],step=0,random=Math.random){
     let skill=0;
     if(step%3===2){
-      const eligible=state.correct>=8?[1,2,3,4,5]:[1,2];
+      const eligible=[1,2,3,4,5];
       skill=eligible.slice().sort((first,second)=>{
         const left=state.skills[first],right=state.skills[second];
         return (left.correct+1)/(left.attempts+2)-(right.correct+1)/(right.attempts+2);
@@ -48,7 +48,7 @@
     const ids=items.map(entry=>entry[0]);
     if(!['owned','placed'].every(key=>Array.isArray(value[key])&&value[key].length<=8&&new Set(value[key]).size===value[key].length&&value[key].every(id=>ids.includes(id)))||!value.placed.every(id=>value.owned.includes(id)))return false;
     if(!Array.isArray(value.drawings)||value.drawings.length>6||!value.drawings.every(entry=>typeof entry==='string'&&entry.length<1500000&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(entry)))return false;
-    if(!Array.isArray(value.history)||value.history.length>150||!value.history.every(entry=>entry&&typeof entry.word==='string'&&bank.some(question=>question.word===entry.word)&&integer(entry.skill,5)&&typeof entry.firstTry==='boolean'&&/^\d{4}-\d{2}-\d{2}$/.test(entry.date)))return false;
+    if(!Array.isArray(value.history)||value.history.length>150||!value.history.every(entry=>entry&&typeof entry.word==='string'&&(bank.some(question=>question.word===entry.word)||Object.hasOwn(root.GardenLibrary?.words||{},entry.word))&&integer(entry.skill,5)&&typeof entry.firstTry==='boolean'&&/^\d{4}-\d{2}-\d{2}$/.test(entry.date)))return false;
     return typeof value.sound==='boolean'&&typeof value.autoAudio==='boolean'&&value.daily&&typeof value.daily==='object'&&!Array.isArray(value.daily)&&Object.entries(value.daily).every(([key,amount])=>/^\d{4}-\d{2}-\d{2}$/.test(key)&&integer(amount));
   }
   const api={skills,bank,items,fresh,select,record,purchase,validate};
