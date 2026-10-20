@@ -41,13 +41,15 @@
   function purchase(state,id){const item=items.find(entry=>entry[0]===id);if(!item||state.owned.includes(id)||state.coins<item[3])return false;state.coins-=item[3];state.owned.push(id);state.placed.push(id);return true;}
   function validate(value){
     const integer=(entry,max=10000000)=>Number.isInteger(entry)&&entry>=0&&entry<=max;
-    if(value?.artDraft!==undefined&&value.artDraft!==null&&(typeof value.artDraft!=='string'||value.artDraft.length>1500000||!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(value.artDraft)))return false;
+    if(value?.studioPrefs!==undefined&&(!value.studioPrefs||!['pencil','marker','crayon','watercolor','glitter','eraser','fill'].includes(value.studioPrefs.tool)||!integer(value.studioPrefs.eraserSize,80)||value.studioPrefs.eraserSize<3||!Array.isArray(value.studioPrefs.recent)||value.studioPrefs.recent.length>8||!value.studioPrefs.recent.every(color=>typeof color==='string'&&/^#[a-fA-F0-9]{6}$/.test(color))))return false;
+    if(value?.audioPrefs!==undefined&&(!value.audioPrefs||typeof value.audioPrefs.musicOn!=='boolean'||!['musicVolume','voiceVolume'].every(key=>Number.isFinite(value.audioPrefs[key])&&value.audioPrefs[key]>=0&&value.audioPrefs[key]<=1)))return false;
+    if(value?.artDraft!==undefined&&value.artDraft!==null&&(typeof value.artDraft!=='string'||value.artDraft.length>3500000||!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(value.artDraft)))return false;
     if(value?.artTools!==undefined&&(!value.artTools||!/^#[a-fA-F0-9]{6}$/.test(value.artTools.ink)||!integer(value.artTools.brush,30)||value.artTools.brush<3||typeof value.artTools.erasing!=='boolean'))return false;
     if(!value||value.version!==1||!['coins','total','correct','rounds','streak','bestStreak'].every(key=>integer(value[key]))||value.correct>value.total)return false;
     if(!Array.isArray(value.skills)||value.skills.length!==6||!value.skills.every(entry=>entry&&integer(entry.attempts)&&integer(entry.correct)&&entry.correct<=entry.attempts))return false;
     const ids=items.map(entry=>entry[0]);
     if(!['owned','placed'].every(key=>Array.isArray(value[key])&&value[key].length<=8&&new Set(value[key]).size===value[key].length&&value[key].every(id=>ids.includes(id)))||!value.placed.every(id=>value.owned.includes(id)))return false;
-    if(!Array.isArray(value.drawings)||value.drawings.length>6||!value.drawings.every(entry=>typeof entry==='string'&&entry.length<1500000&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(entry)))return false;
+    if(!Array.isArray(value.drawings)||value.drawings.length>6||!value.drawings.every(entry=>typeof entry==='string'&&entry.length<3500000&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(entry)))return false;
     if(!Array.isArray(value.history)||value.history.length>150||!value.history.every(entry=>entry&&typeof entry.word==='string'&&(bank.some(question=>question.word===entry.word)||Object.hasOwn(root.GardenLibrary?.words||{},entry.word))&&integer(entry.skill,5)&&typeof entry.firstTry==='boolean'&&/^\d{4}-\d{2}-\d{2}$/.test(entry.date)))return false;
     return typeof value.sound==='boolean'&&typeof value.autoAudio==='boolean'&&value.daily&&typeof value.daily==='object'&&!Array.isArray(value.daily)&&Object.entries(value.daily).every(([key,amount])=>/^\d{4}-\d{2}-\d{2}$/.test(key)&&integer(amount));
   }

@@ -1,0 +1,9 @@
+Reign's Garden — Little Garden Morning
+
+Original instrumental composition and procedural recording created for this Reign's Garden update, 2026-10-21. Soft synthesized piano and music-box tones; no vocals, sampled recordings, external sound libraries, or streaming services.
+
+This new composition and recording are dedicated to the public domain under CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/
+
+The seamless 48-second loop is synthesized at 24 kHz, 16-bit mono. Sustaining notes are wrapped across the loop boundary. Playback uses a looping Web Audio buffer with a gentle gain ramp and automatic voice ducking. Default music gain is 12%.
+
+This license applies only to audio/garden-music.wav, not the game's existing artwork or other assets.

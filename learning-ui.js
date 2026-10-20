@@ -10,18 +10,18 @@
     if(!audioUrls.has(reference.src)){const request=fetch(reference.src).then(response=>{if(!response.ok)throw Error('Audio missing');return response.blob();}).then(blob=>URL.createObjectURL(blob));audioUrls.set(reference.src,request);request.catch(()=>audioUrls.delete(reference.src));}
     const url=await audioUrls.get(reference.src);if(token!==audioToken)return;
     await new Promise((resolve,reject)=>{
-      const player=new Audio(url);audio=player;player.preload='auto';
+      const player=new Audio(url);audio=player;player.preload='auto';const untrack=GardenAudio.track(player);let release=null;
       let finished=false;
-      const finish=error=>{if(finished)return;finished=true;clearTimeout(audioTimer);player.pause();if(audio===player){audio=null;audioCancel=null;}if(error instanceof Error)reject(error);else resolve();};
+      const finish=error=>{if(finished)return;finished=true;clearTimeout(audioTimer);player.pause();release?.();untrack();if(audio===player){audio=null;audioCancel=null;}if(error instanceof Error)reject(error);else resolve();};
       audioCancel=finish;
       player.onerror=()=>finish(Error('Audio unavailable'));
       player.onloadedmetadata=()=>{player.currentTime=reference.start;};
-      player.onseeked=()=>{if(token!==audioToken){finish();return;}player.play().then(()=>{audioStatus('Playing bundled English audio…');audioTimer=setTimeout(finish,Math.max(40,(reference.end-reference.start)*1000));}).catch(error=>finish(error));};
+      player.onseeked=()=>{if(token!==audioToken){finish();return;}player.play().then(()=>{if(finished||token!==audioToken){player.pause();return;}release=GardenAudio.beginVoice();audioStatus('Playing bundled English audio…');audioTimer=setTimeout(finish,Math.max(40,(reference.end-reference.start)*1000));}).catch(error=>finish(error));};
       player.ontimeupdate=()=>{if(player.currentTime>=reference.end||token!==audioToken)finish();};player.onended=finish;
     });
   }
   async function hear(segments=false,instruction=false){
-    if(!round?.question)return;stop();if('speechSynthesis' in window)speechSynthesis.cancel();const token=audioToken,word=round.question.word;
+    if(!round?.question)return;stop();GardenAudio.cancelSpeech();if('speechSynthesis' in window)speechSynthesis.cancel();const token=audioToken,word=round.question.word;
     try{if(instruction){await clip(Learning.library.instructions[round.question.activity],token);if(token!==audioToken)return;}if(segments){round.hinted=true;for(const phone of word.phonemeAudioKeys||word.phonemes){await clip(Learning.library.phonemeAudio[phone],token);if(token!==audioToken)return;await new Promise(resolve=>setTimeout(resolve,180));}}await clip(word.audio,token);if(token===audioToken)audioStatus(state.sound?'English audio played · tap to hear again':'Audio is off');}catch{audioStatus('Audio needs a tap · use Hear the word');toast('Tap Hear again to play the bundled English audio. If audio is off, use the sound button.');}
   }
   function levels(){

@@ -1,0 +1,28 @@
+(function(root){
+  let preferences,context,source,gain,loaded,engaged=false,speechEnd=null,hold=null;
+  const voices=new Set(),players=new Set();
+  const defaults=()=>({musicOn:true,musicVolume:.12,voiceVolume:1});
+  function target(){return preferences?.musicOn&&!document.hidden?preferences.musicVolume*(voices.size?.12:1):0;}
+  function status(){const note=document.querySelector('#garden-audio-note');if(note)note.textContent=document.hidden?'Music paused while the game is away':!preferences?.musicOn?'Music is off':voices.size?'Music is softer while we listen':source&&context?.state==='running'?'Garden music is playing softly':'Tap a game button to start gentle music';}
+  function fade(){status();if(!gain||!context)return;gain.gain.cancelScheduledValues(context.currentTime);gain.gain.setTargetAtTime(target(),context.currentTime,voices.size?.08:.4);}
+  function sync(value){preferences=value.audioPrefs={...defaults(),...value.audioPrefs};for(const player of players)player.volume=preferences.voiceVolume;fade();const button=document.querySelector('#garden-music-toggle');if(button){button.textContent=preferences.musicOn?'🎵':'🎵̸';button.setAttribute('aria-label',preferences.musicOn?'Turn garden music off':'Turn garden music on');button.setAttribute('aria-pressed',String(preferences.musicOn));}for(const [id,key] of [['music-volume','musicVolume'],['voice-volume','voiceVolume']]){const control=document.querySelector('#'+id);if(control)control.value=Math.round(preferences[key]*100);}}
+  async function start(){if(!engaged||!preferences?.musicOn||document.hidden)return;
+    try{const AudioContext=root.AudioContext||root.webkitAudioContext;if(!AudioContext)return;if(!context){context=new AudioContext();gain=context.createGain();gain.gain.value=0;gain.connect(context.destination);}await context.resume();
+      if(!loaded)loaded=fetch('audio/garden-music.wav').then(response=>{if(!response.ok)throw Error('Music unavailable');return response.arrayBuffer();}).then(bytes=>context.decodeAudioData(bytes)).catch(error=>{loaded=null;throw error;});
+      const buffer=await loaded;if(!source){source=context.createBufferSource();source.buffer=buffer;source.loop=true;source.connect(gain);source.start();}fade();
+    }catch{const status=document.querySelector('#garden-audio-note');if(status)status.textContent='Music will start after a tap when its offline file is ready.';}
+  }
+  function beginVoice(){const token={};clearTimeout(hold);voices.add(token);fade();let finished=false;return ()=>{if(finished)return;finished=true;voices.delete(token);clearTimeout(hold);hold=setTimeout(fade,220);};}
+  function track(player){players.add(player);player.volume=preferences?.voiceVolume??1;return ()=>players.delete(player);}
+  function cancelSpeech(){speechEnd?.();speechEnd=null;}
+  function speak(message){if(!state.sound)return;if(!('speechSynthesis' in root)){toast('Audio is unavailable in this browser. Read the instruction on screen.');return;}cancelSpeech();speechSynthesis.cancel();const voice=new SpeechSynthesisUtterance(message);voice.lang='en-US';voice.rate=.78;voice.pitch=1.08;voice.volume=preferences?.voiceVolume??1;speechEnd=beginVoice();const release=speechEnd;voice.onend=voice.onerror=()=>{release();if(speechEnd===release)speechEnd=null;};speechSynthesis.speak(voice);}
+  function install(){
+    sync(state);const controls=document.createElement('div');controls.className='garden-audio-controls';controls.innerHTML='<button class="icon-button" id="garden-music-toggle" aria-label="Turn garden music off" aria-pressed="true">🎵</button><details class="audio-volume-panel"><summary>♫ Audio</summary><div class="audio-volume-content"><label>Music volume<input id="music-volume" type="range" min="0" max="100" value="12"></label><label>Instructions &amp; sounds<input id="voice-volume" type="range" min="0" max="100" value="100"></label><p id="garden-audio-note">Music softens while words are spoken.</p></div></details>';document.querySelector('.header-right').appendChild(controls);sync(state);
+    document.querySelector('#garden-music-toggle').onclick=()=>{engaged=true;state.audioPrefs.musicOn=!state.audioPrefs.musicOn;sync(state);save();if(preferences.musicOn)start();};
+    for(const [id,key] of [['music-volume','musicVolume'],['voice-volume','voiceVolume']]){const control=document.querySelector('#'+id);control.setAttribute('aria-label',id==='music-volume'?'Music volume':'Instructions and sounds volume');control.oninput=event=>{state.audioPrefs[key]=Number(event.target.value)/100;sync(state);save();if(key==='musicVolume')start();};}
+    const engage=()=>{engaged=true;start();};document.addEventListener('pointerdown',engage,{passive:true});document.addEventListener('keydown',engage);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelSpeech();if('speechSynthesis' in root)speechSynthesis.cancel();context?.suspend().catch(()=>{});status();}else if(engaged)start();});
+    document.querySelector('#sound').addEventListener('click',()=>{if(!state.sound)cancelSpeech();});
+  }
+  root.GardenAudio={install,sync,beginVoice,track,cancelSpeech,speak};
+})(window);
